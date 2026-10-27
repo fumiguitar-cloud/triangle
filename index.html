@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三角形・角度計算ツール（作図機能つき）</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 15px; background: #f0f2f5; color: #333; margin: 0; }
+  .card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 620px; margin-left: auto; margin-right: auto; }
+  h2 { font-size: 1.1rem; margin-top: 0; border-bottom: 2px solid #007bff; padding-bottom: 6px; color: #1a73e8; }
+  .tab-btn-wrap { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tab-btn { flex: 1; padding: 10px; border: 1px solid #007bff; background: #fff; color: #007bff; font-weight: bold; border-radius: 6px; cursor: pointer; }
+  .tab-btn.active { background: #007bff; color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  label { font-size: 0.85rem; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
+  input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+  button.calc-btn { width: 100%; background: #007bff; color: white; border: none; padding: 12px; font-size: 1.05rem; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 6px; }
+  button.calc-btn:active { background: #0056b3; }
+  .res-box { background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-top: 14px; font-size: 0.95rem; }
+  .res-title { font-weight: bold; color: #1e293b; margin-bottom: 6px; }
+  .val-highlight { font-weight: bold; color: #d9381e; font-size: 1.05rem; }
+  .val-sub { font-weight: bold; color: #0d6efd; font-size: 1.05rem; }
+  .canvas-wrap { text-align: center; margin-top: 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; }
+  canvas { max-width: 100%; height: auto; background: #fff; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>三角形・角度計算ツール</h2>
+
+  <div class="tab-btn-wrap">
+    <button class="tab-btn active" onclick="switchTab('right')">直角三角形 (三角比)</button>
+    <button class="tab-btn" onclick="switchTab('general')">一般三角形 (正弦・余弦)</button>
+  </div>
+
+  <!-- 1. 直角三角形タブ -->
+  <div id="tab-right" class="tab-content active">
+    <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">
+      ※斜辺A、底辺B、高さC、底角θ のうち<b>いずれか2つ</b>を入力してください。
+    </div>
+
+    <div class="grid">
+      <div>
+        <label>斜辺 (A)</label>
+        <input type="number" id="rt_a" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>底辺 (B)</label>
+        <input type="number" id="rt_b" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>高さ (C)</label>
+        <input type="number" id="rt_c" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>底角 θ [度]</label>
+        <input type="number" id="rt_th" step="any" placeholder="未入力可">
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calcRightTriangle()">計算して図形を描画</button>
+
+    <div class="res-box" id="rt_res" style="display:none;">
+      <div class="res-title">■ 直角三角形の計算結果</div>
+      <div style="margin-bottom: 4px;">斜辺 A: <span class="val-sub" id="res_rt_a">-</span> | 底辺 B: <span class="val-sub" id="res_rt_b">-</span> | 高さ C: <span class="val-sub" id="res_rt_c">-</span></div>
+      <div>底角 θ: <span class="val-highlight" id="res_rt_th">-</span>° | 頂角: <span class="val-highlight" id="res_rt_th2">-</span>°</div>
+
+      <div class="canvas-wrap">
+        <canvas id="rt_canvas" width="500" height="320"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 一般三角形タブ -->
+  <div id="tab-general" class="tab-content">
+    <div style="font-size:0.85rem; color:#64748b; margin-bottom:10px;">
+      ※「2辺と挟み角」「1辺と2角」「3辺」のいずれかの条件を入力してください。
+    </div>
+
+    <div class="grid">
+      <div>
+        <label>辺 a</label>
+        <input type="number" id="gen_a" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>角 A [度] (辺aの対角)</label>
+        <input type="number" id="gen_angA" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>辺 b</label>
+        <input type="number" id="gen_b" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>角 B [度] (辺bの対角)</label>
+        <input type="number" id="gen_angB" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>辺 c</label>
+        <input type="number" id="gen_c" step="any" placeholder="未入力可">
+      </div>
+      <div>
+        <label>角 C [度] (辺cの対角)</label>
+        <input type="number" id="gen_angC" step="any" placeholder="未入力可">
+      </div>
+    </div>
+
+    <button class="calc-btn" onclick="calcGeneralTriangle()">計算して図形を描画</button>
+
+    <div class="res-box" id="gen_res" style="display:none;">
+      <div class="res-title">■ 一般三角形の計算結果</div>
+      <div>辺 a: <span class="val-sub" id="res_gen_a">-</span> / 角 A: <span class="val-highlight" id="res_gen_angA">-</span>°</div>
+      <div>辺 b: <span class="val-sub" id="res_gen_b">-</span> / 角 B: <span class="val-highlight" id="res_gen_angB">-</span>°</div>
+      <div>辺 c: <span class="val-sub" id="res_gen_c">-</span> / 角 C: <span class="val-highlight" id="res_gen_angC">-</span>°</div>
+
+      <div class="canvas-wrap">
+        <canvas id="gen_canvas" width="500" height="320"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(type) {
+  const tabs = document.querySelectorAll('.tab-btn');
+  const contents = document.querySelectorAll('.tab-content');
+  tabs.forEach(t => t.classList.remove('active'));
+  contents.forEach(c => c.classList.remove('active'));
+
+  if (type === 'right') {
+    tabs[0].classList.add('active');
+    document.getElementById('tab-right').classList.add('active');
+  } else {
+    tabs[1].classList.add('active');
+    document.getElementById('tab-general').classList.add('active');
+  }
+}
+
+// 1. 直角三角形の計算＆描画
+function calcRightTriangle() {
+  let A = parseFloat(document.getElementById('rt_a').value);
+  let B = parseFloat(document.getElementById('rt_b').value);
+  let C = parseFloat(document.getElementById('rt_c').value);
+  let th = parseFloat(document.getElementById('rt_th').value);
+
+  const rad = d => d * Math.PI / 180;
+  const deg = r => r * 180 / Math.PI;
+
+  let count = [!isNaN(A), !isNaN(B), !isNaN(C), !isNaN(th)].filter(Boolean).length;
+  if (count < 2) {
+    alert("いずれか2つの数値を入力してください。");
+    return;
+  }
+
+  if (!isNaN(th)) {
+    let r = rad(th);
+    if (!isNaN(A)) {
+      B = A * Math.cos(r);
+      C = A * Math.sin(r);
+    } else if (!isNaN(B)) {
+      A = B / Math.cos(r);
+      C = B * Math.tan(r);
+    } else if (!isNaN(C)) {
+      A = C / Math.sin(r);
+      B = C / Math.tan(r);
+    }
+  } else {
+    if (!isNaN(B) && !isNaN(C)) {
+      A = Math.sqrt(B * B + C * C);
+      th = deg(Math.atan2(C, B));
+    } else if (!isNaN(A) && !isNaN(B)) {
+      if (A <= B) { alert("斜辺Aは底辺Bより大きい必要があります。"); return; }
+      C = Math.sqrt(A * A - B * B);
+      th = deg(Math.acos(B / A));
+    } else if (!isNaN(A) && !isNaN(C)) {
+      if (A <= C) { alert("斜辺Aは高さCより大きい必要があります。"); return; }
+      B = Math.sqrt(A * A - C * C);
+      th = deg(Math.asin(C / A));
+    }
+  }
+
+  document.getElementById('rt_res').style.display = 'block';
+  document.getElementById('res_rt_a').innerText = A.toFixed(3);
+  document.getElementById('res_rt_b').innerText = B.toFixed(3);
+  document.getElementById('res_rt_c').innerText = C.toFixed(3);
+  document.getElementById('res_rt_th').innerText = th.toFixed(3);
+  document.getElementById('res_rt_th2').innerText = (90 - th).toFixed(3);
+
+  // Canvas描画
+  drawRightTriangle(B, C, A, th);
+}
+
+function drawRightTriangle(b, c, a, th) {
+  const cvs = document.getElementById('rt_canvas');
+  const ctx = cvs.getContext('2d');
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+  const pad = 55;
+  const maxW = cvs.width - pad * 2;
+  const maxH = cvs.height - pad * 2;
+  const scale = Math.min(maxW / b, maxH / c);
+
+  // 頂点座標: 原点(左下), 直角(右下), 頂点(右上)
+  const p0 = { x: pad, y: cvs.height - pad }; // 左下（角θ）
+  const p1 = { x: pad + b * scale, y: cvs.height - pad }; // 右下（直角）
+  const p2 = { x: pad + b * scale, y: cvs.height - pad - c * scale }; // 右上
+
+  // 三角形本体
+  ctx.beginPath();
+  ctx.moveTo(p0.x, p0.y);
+  ctx.lineTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.closePath();
+  ctx.fillStyle = '#e8f0fe';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#1a73e8';
+  ctx.stroke();
+
+  // 直角マーク
+  const sq = 14;
+  ctx.beginPath();
+  ctx.moveTo(p1.x - sq, p1.y);
+  ctx.lineTo(p1.x - sq, p1.y - sq);
+  ctx.lineTo(p1.x, p1.y - sq);
+  ctx.strokeStyle = '#555';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 角度弧
+  ctx.beginPath();
+  ctx.arc(p0.x, p0.y, 28, 0, -Math.atan2(c * scale, b * scale), true);
+  ctx.strokeStyle = '#d9381e';
+  ctx.stroke();
+
+  // 文字ラベル
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillStyle = '#1e293b';
+  // 底辺 B
+  ctx.textAlign = 'center';
+  ctx.fillText(`底辺 B: ${b.toFixed(2)}`, (p0.x + p1.x) / 2, p0.y + 24);
+  // 高さ C
+  ctx.textAlign = 'left';
+  ctx.fillText(`高さ C: ${c.toFixed(2)}`, p1.x + 10, (p1.y + p2.y) / 2);
+  // 斜辺 A
+  ctx.textAlign = 'center';
+  ctx.fillText(`斜辺 A: ${a.toFixed(2)}`, (p0.x + p2.x) / 2 - 25, (p0.y + p2.y) / 2 - 10);
+  // 角度 θ
+  ctx.fillStyle = '#d9381e';
+  ctx.textAlign = 'left';
+  ctx.fillText(`θ: ${th.toFixed(2)}°`, p0.x + 34, p0.y - 10);
+}
+
+// 2. 一般三角形の計算＆描画
+function calcGeneralTriangle() {
+  let a = parseFloat(document.getElementById('gen_a').value);
+  let b = parseFloat(document.getElementById('gen_b').value);
+  let c = parseFloat(document.getElementById('gen_c').value);
+  let A = parseFloat(document.getElementById('gen_angA').value);
+  let B = parseFloat(document.getElementById('gen_angB').value);
+  let C = parseFloat(document.getElementById('gen_angC').value);
+
+  const rad = d => d * Math.PI / 180;
+  const deg = r => r * 180 / Math.PI;
+
+  if (!isNaN(A) && !isNaN(B) && isNaN(C)) C = 180 - A - B;
+  if (!isNaN(B) && !isNaN(C) && isNaN(A)) A = 180 - B - C;
+  if (!isNaN(C) && !isNaN(A) && isNaN(B)) B = 180 - C - A;
+
+  if (!isNaN(a) && !isNaN(b) && !isNaN(C) && isNaN(c)) {
+    c = Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(rad(C)));
+    A = deg(Math.acos((b * b + c * c - a * a) / (2 * b * c)));
+    B = 180 - A - C;
+  } else if (!isNaN(b) && !isNaN(c) && !isNaN(A) && isNaN(a)) {
+    a = Math.sqrt(b * b + c * c - 2 * b * c * Math.cos(rad(A)));
+    B = deg(Math.acos((c * c + a * a - b * b) / (2 * c * a)));
+    C = 180 - A - B;
+  } else if (!isNaN(c) && !isNaN(a) && !isNaN(B) && isNaN(b)) {
+    b = Math.sqrt(c * c + a * a - 2 * c * a * Math.cos(rad(B)));
+    A = deg(Math.acos((b * b + c * c - a * a) / (2 * b * c)));
+    C = 180 - A - B;
+  } else if (!isNaN(A) && !isNaN(B) && !isNaN(C)) {
+    if (!isNaN(a)) {
+      b = a * Math.sin(rad(B)) / Math.sin(rad(A));
+      c = a * Math.sin(rad(C)) / Math.sin(rad(A));
+    } else if (!isNaN(b)) {
+      a = b * Math.sin(rad(A)) / Math.sin(rad(B));
+      c = b * Math.sin(rad(C)) / Math.sin(rad(B));
+    } else if (!isNaN(c)) {
+      a = c * Math.sin(rad(A)) / Math.sin(rad(C));
+      b = c * Math.sin(rad(B)) / Math.sin(rad(C));
+    } else {
+      alert("少なくとも1つの辺の長さを入力してください。");
+      return;
+    }
+  } else if (!isNaN(a) && !isNaN(b) && !isNaN(c)) {
+    A = deg(Math.acos((b * b + c * c - a * a) / (2 * b * c)));
+    B = deg(Math.acos((c * c + a * a - b * b) / (2 * c * a)));
+    C = 180 - A - B;
+  } else {
+    alert("計算に必要な条件が不足しています。");
+    return;
+  }
+
+  document.getElementById('gen_res').style.display = 'block';
+  document.getElementById('res_gen_a').innerText = a.toFixed(3);
+  document.getElementById('res_gen_b').innerText = b.toFixed(3);
+  document.getElementById('res_gen_c').innerText = c.toFixed(3);
+  document.getElementById('res_gen_angA').innerText = A.toFixed(3);
+  document.getElementById('res_gen_angB').innerText = B.toFixed(3);
+  document.getElementById('res_gen_angC').innerText = C.toFixed(3);
+
+  drawGeneralTriangle(a, b, c, A, B, C);
+}
+
+function drawGeneralTriangle(a, b, c, A, B, C) {
+  const cvs = document.getElementById('gen_canvas');
+  const ctx = cvs.getContext('2d');
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+  // 底辺を c、左端頂点を A(0,0)、右端頂点を B(c,0)、上部頂点を C(x, y) とする
+  const radA = A * Math.PI / 180;
+  const Cx = b * Math.cos(radA);
+  const Cy = b * Math.sin(radA);
+
+  const minX = Math.min(0, Cx, c);
+  const maxX = Math.max(0, Cx, c);
+  const triW = maxX - minX;
+  const triH = Cy;
+
+  const pad = 60;
+  const scale = Math.min((cvs.width - pad * 2) / triW, (cvs.height - pad * 2) / triH);
+
+  // スクリーン座標変換
+  const toScr = (x, y) => ({
+    x: pad + (x - minX) * scale,
+    y: cvs.height - pad - y * scale
+  });
+
+  const pA = toScr(0, 0);
+  const pB = toScr(c, 0);
+  const pC = toScr(Cx, Cy);
+
+  // 三角形描画
+  ctx.beginPath();
+  ctx.moveTo(pA.x, pA.y);
+  ctx.lineTo(pB.x, pB.y);
+  ctx.lineTo(pC.x, pC.y);
+  ctx.closePath();
+  ctx.fillStyle = '#e8f0fe';
+  ctx.fill();
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#1a73e8';
+  ctx.stroke();
+
+  // ラベル描画
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillStyle = '#1e293b';
+
+  // 辺 c (底辺)
+  ctx.textAlign = 'center';
+  ctx.fillText(`辺 c: ${c.toFixed(2)}`, (pA.x + pB.x) / 2, pA.y + 25);
+  // 辺 b (AC)
+  ctx.fillText(`辺 b: ${b.toFixed(2)}`, (pA.x + pC.x) / 2 - 25, (pA.y + pC.y) / 2 - 5);
+  // 辺 a (BC)
+  ctx.fillText(`辺 a: ${a.toFixed(2)}`, (pB.x + pC.x) / 2 + 25, (pB.y + pC.y) / 2 - 5);
+
+  // 頂点・角度
+  ctx.fillStyle = '#d9381e';
+  ctx.textAlign = 'right';
+  ctx.fillText(`A: ${A.toFixed(1)}°`, pA.x - 8, pA.y + 5);
+  ctx.textAlign = 'left';
+  ctx.fillText(`B: ${B.toFixed(1)}°`, pB.x + 8, pB.y + 5);
+  ctx.textAlign = 'center';
+  ctx.fillText(`C: ${C.toFixed(1)}°`, pC.x, pC.y - 12);
+}
+</script>
+
+</body>
+</html>
